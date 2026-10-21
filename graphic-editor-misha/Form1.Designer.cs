@@ -45,6 +45,7 @@ namespace graphic_editor_misha
             this.pasteMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.btnPencil = new System.Windows.Forms.ToolStripButton();
+            this.btnEraser = new System.Windows.Forms.ToolStripButton();
             this.btnLine = new System.Windows.Forms.ToolStripButton();
             this.btnRectangle = new System.Windows.Forms.ToolStripButton();
             this.btnEllipse = new System.Windows.Forms.ToolStripButton();
@@ -194,6 +195,7 @@ namespace graphic_editor_misha
             // 
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.btnPencil,
+            this.btnEraser,
             this.btnLine,
             this.btnRectangle,
             this.btnEllipse,
@@ -218,6 +220,14 @@ namespace graphic_editor_misha
             this.btnPencil.Size = new System.Drawing.Size(67, 22);
             this.btnPencil.Text = "Карандаш";
             this.btnPencil.Click += new System.EventHandler(this.toolButton_Click);
+            // 
+            // btnEraser
+            // 
+            this.btnEraser.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.btnEraser.Name = "btnEraser";
+            this.btnEraser.Size = new System.Drawing.Size(48, 22);
+            this.btnEraser.Text = "Ластик";
+            this.btnEraser.Click += new System.EventHandler(this.toolButton_Click);
             // 
             // btnLine
             // 
@@ -319,6 +329,7 @@ namespace graphic_editor_misha
             this.canvas.MouseDown += new System.Windows.Forms.MouseEventHandler(this.canvas_MouseDown);
             this.canvas.MouseMove += new System.Windows.Forms.MouseEventHandler(this.canvas_MouseMove);
             this.canvas.MouseUp += new System.Windows.Forms.MouseEventHandler(this.canvas_MouseUp);
+            this.canvas.MouseLeave += new System.EventHandler(this.canvas_MouseLeave);
             // 
             // openFileDialog1
             // 
@@ -369,6 +380,7 @@ namespace graphic_editor_misha
         private System.Windows.Forms.ToolStripMenuItem pasteMenuItem;
         private System.Windows.Forms.ToolStrip toolStrip1;
         private System.Windows.Forms.ToolStripButton btnPencil;
+        private System.Windows.Forms.ToolStripButton btnEraser;
         private System.Windows.Forms.ToolStripButton btnLine;
         private System.Windows.Forms.ToolStripButton btnRectangle;
         private System.Windows.Forms.ToolStripButton btnEllipse;

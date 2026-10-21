@@ -22,6 +22,7 @@ namespace graphic_editor_misha
         private ToolStripButton currentTool;     // кнопка выбранного инструмента
         private Color lineColor = Color.Black;   // цвет контура
         private Color fillColor = Color.Yellow;  // цвет заливки
+        private Color backgroundColor = Color.White; // цвет фона: им закрашивают ластик и «Вырезать»
 
         private bool drawing;                    // зажата ли левая кнопка мыши
         private Point startPoint;                // где нажали кнопку мыши
@@ -44,7 +45,7 @@ namespace graphic_editor_misha
         {
             Bitmap b = new Bitmap(800, 500);
             using (Graphics g = Graphics.FromImage(b))
-                g.Clear(Color.White);
+                g.Clear(backgroundColor);
             undoStack.Clear();
             redoStack.Clear();
             currentFile = null;
@@ -86,6 +87,36 @@ namespace graphic_editor_misha
         {
             return new Rectangle(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y),
                                  Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
+        }
+
+        // Ластик крупнее карандаша той же толщины, иначе им неудобно стирать.
+        private int EraserSize()
+        {
+            return int.Parse(cmbWidth.Text) * 4;
+        }
+
+        // Квадрат ластика с центром в точке p.
+        private Rectangle EraserRect(Point p)
+        {
+            int size = EraserSize();
+            return new Rectangle(p.X - size / 2, p.Y - size / 2, size, size);
+        }
+
+        // Стирает (закрашивает цветом фона) путь от a до b: квадрат ластика
+        // ставится в каждую точку отрезка, чтобы при быстром движении мыши не было пропусков.
+        private void Erase(Point a, Point b)
+        {
+            int steps = Math.Max(Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
+            using (Graphics g = Graphics.FromImage(bmp))
+            using (Brush brush = new SolidBrush(backgroundColor))
+            {
+                for (int i = 0; i <= steps; i++)
+                {
+                    int x = steps == 0 ? a.X : a.X + (b.X - a.X) * i / steps;
+                    int y = steps == 0 ? a.Y : a.Y + (b.Y - a.Y) * i / steps;
+                    g.FillRectangle(brush, EraserRect(new Point(x, y)));
+                }
+            }
         }
 
         private bool IsShapeTool()
@@ -177,14 +208,17 @@ namespace graphic_editor_misha
                 return;
             }
 
-            if (currentTool == btnPencil) SaveUndo();
+            if (currentTool == btnPencil || currentTool == btnEraser) SaveUndo();
+            if (currentTool == btnEraser) Erase(e.Location, e.Location);   // стираем и просто по щелчку
             if (currentTool == btnSelect) selection = Rectangle.Empty;
             drawing = true;
             startPoint = lastPoint = endPoint = e.Location;
+            canvas.Invalidate();
         }
 
         private void canvas_MouseMove(object sender, MouseEventArgs e)
         {
+            if (currentTool == btnEraser) canvas.Invalidate();   // рамка ластика следует за мышью
             if (!drawing) return;
 
             if (currentTool == btnPencil)
@@ -192,6 +226,11 @@ namespace graphic_editor_misha
                 using (Graphics g = Graphics.FromImage(bmp))
                 using (Pen pen = CreatePen())
                     g.DrawLine(pen, lastPoint, e.Location);
+                lastPoint = e.Location;
+            }
+            else if (currentTool == btnEraser)
+            {
+                Erase(lastPoint, e.Location);
                 lastPoint = e.Location;
             }
             else if (currentTool == btnSelect)
@@ -220,6 +259,12 @@ namespace graphic_editor_misha
             canvas.Invalidate();
         }
 
+        // Мышь ушла с холста — убираем рамку ластика.
+        private void canvas_MouseLeave(object sender, EventArgs e)
+        {
+            canvas.Invalidate();
+        }
+
         // Вывод на экран. PictureBox рисует с двойной буферизацией:
         // всё ниже сначала рисуется в буфер в памяти и потом показывается целиком.
         private void canvas_Paint(object sender, PaintEventArgs e)
@@ -237,13 +282,21 @@ namespace graphic_editor_misha
                     e.Graphics.DrawRectangle(pen, selection);
                 }
             }
+
+            // Рамка ластика: на белом фоне иначе не видно, что именно сотрётся.
+            Point mouse = canvas.PointToClient(Cursor.Position);
+            if (currentTool == btnEraser && canvas.ClientRectangle.Contains(mouse))
+            {
+                Rectangle r = EraserRect(mouse);
+                e.Graphics.DrawRectangle(Pens.Black, r.X, r.Y, r.Width - 1, r.Height - 1);
+            }
         }
 
         // ---------- Панель инструментов ----------
 
         private void toolButton_Click(object sender, EventArgs e)
         {
-            btnPencil.Checked = btnLine.Checked = btnRectangle.Checked =
+            btnPencil.Checked = btnEraser.Checked = btnLine.Checked = btnRectangle.Checked =
                 btnEllipse.Checked = btnFill.Checked = btnSelect.Checked = false;
             currentTool = (ToolStripButton)sender;
             currentTool.Checked = true;
@@ -356,7 +409,8 @@ namespace graphic_editor_misha
             copyMenuItem_Click(sender, e);
             SaveUndo();
             using (Graphics g = Graphics.FromImage(bmp))
-                g.FillRectangle(Brushes.White, selection);
+            using (Brush brush = new SolidBrush(backgroundColor))
+                g.FillRectangle(brush, selection);
             canvas.Invalidate();
         }
 
